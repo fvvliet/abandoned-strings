@@ -28,7 +28,7 @@ func findFilesIn(_ directories: [String], withExtensions extensions: [String]) -
         }
         while let path = enumerator.nextObject() as? String {
             let fileExtension = (path as NSString).pathExtension.lowercased()
-            if extensions.contains(fileExtension) {
+            if extensions.contains(fileExtension) && !path.contains("Pods") {
                 let fullPath = (directory as NSString).appendingPathComponent(path)
                 files.append(fullPath)
             }
@@ -83,10 +83,11 @@ func extractStringIdentifierFromTrimmedLine(_ line: String) -> String {
 func findStringIdentifiersIn(_ stringsFile: String, abandonedBySourceCode sourceCode: String) -> [String] {
     return extractStringIdentifiersFrom(stringsFile).filter { identifier in
         let quotedIdentifier = "\"\(identifier)\""
-        let quotedIdentifierForStoryboard = "\"@\(identifier)\""
-        let signalQuotedIdentifierForJs = "'\(identifier)'"
-        let isAbandoned = (sourceCode.contains(quotedIdentifier) == false && sourceCode.contains(quotedIdentifierForStoryboard) == false &&
-            sourceCode.contains(signalQuotedIdentifierForJs) == false)
+//        let quotedIdentifierForStoryboard = "\"@\(identifier)\""
+//        let signalQuotedIdentifierForJs = "'\(identifier)'"
+        let isAbandoned = (sourceCode.contains(quotedIdentifier) == false)
+//            && sourceCode.contains(quotedIdentifierForStoryboard) == false &&
+//            sourceCode.contains(signalQuotedIdentifierForJs) == false)
         return isAbandoned
     }
 }
@@ -108,7 +109,7 @@ func findAbandonedIdentifiersIn(_ rootDirectories: [String], withStoryboard: Boo
     var map = StringsFileToAbandonedIdentifiersMap()
     let sourceCode = concatenateAllSourceCodeIn(rootDirectories, withStoryboard: withStoryboard)
     let stringsFiles = findFilesIn(rootDirectories, withExtensions: ["strings"])
-    for stringsFile in stringsFiles {
+    for stringsFile in stringsFiles where stringsFile.contains("Localizable.strings"){
         dispatchGroup.enter()
         DispatchQueue.global().async {
             let abandonedIdentifiers = findStringIdentifiersIn(stringsFile, abandonedBySourceCode: sourceCode)
@@ -153,13 +154,17 @@ func isOptionaParameterForWritingAvailable() -> Bool {
 }
 
 func displayAbandonedIdentifiersInMap(_ map: StringsFileToAbandonedIdentifiersMap) {
+    
+    var total = 0
     for file in map.keys.sorted() {
         print("\(file)")
         for identifier in map[file]!.sorted() {
             print("  \(identifier)")
         }
+        total += map[file]!.count
         print("")
     }
+    print("Total abandoned: \(total)")
 }
 
 if let rootDirectories = getRootDirectories() {
